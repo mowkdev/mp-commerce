@@ -6,6 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "docker:dev": "docker compose up -d",
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
     "start": "turbo start",
