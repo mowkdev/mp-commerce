@@ -1,5 +1,4 @@
 import { CollectionConfig } from 'payload'
-import { convertMarkdownToLexical, editorConfigFactory } from '@payloadcms/richtext-lexical';
 
 const isMedusaRequest = ({ req }: { req: any }) => !!req.query.is_from_medusa
 
@@ -7,6 +6,7 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
+    defaultColumns: ['title', 'handle', 'medusa_id'],
   },
   fields: [
     {
@@ -15,12 +15,14 @@ export const Products: CollectionConfig = {
       label: 'Medusa Product ID',
       required: true,
       unique: true,
+      index: true,
       admin: {
-        hidden: true,
+        readOnly: true,
+        description: 'Reference to the product in Medusa. Source of truth for product data.',
       },
       access: {
         update: isMedusaRequest,
-      }
+      },
     },
     {
       name: 'title',
@@ -28,8 +30,10 @@ export const Products: CollectionConfig = {
       label: 'Title',
       required: true,
       localized: true,
+      index: true,
       admin: {
         readOnly: true,
+        description: 'Synced from Medusa. Edit in Medusa admin.',
       },
       access: {
         update: isMedusaRequest,
@@ -49,23 +53,11 @@ export const Products: CollectionConfig = {
       },
     },
     {
-      name: 'description',
-      type: 'richText',
-      label: 'Description',
-      required: false,
-      localized: true,
-      admin: {
-        readOnly: true,
-      },
-      access: {
-        update: isMedusaRequest,
-      },
-    },
-    {
       name: 'handle',
       type: 'text',
       label: 'Handle',
       required: false,
+      index: true,
       admin: {
         readOnly: true,
       },
@@ -86,29 +78,12 @@ export const Products: CollectionConfig = {
       },
     },
     {
-      name: 'images',
-      type: 'array',
-      label: 'Product Images',
-      required: false,
-      admin: {
-        readOnly: true,
-      },
-      access: {
-        update: isMedusaRequest,
-      },
-      fields: [
-        {
-          name: 'url',
-          type: 'text',
-          label: 'Image URL',
-          required: true,
-        },
-      ],
-    },
-    {
       name: 'seo',
       type: 'group',
       label: 'SEO',
+      admin: {
+        description: 'SEO metadata is managed in Payload (per-locale).',
+      },
       fields: [
         {
           name: 'meta_title',
@@ -133,124 +108,9 @@ export const Products: CollectionConfig = {
         },
       ],
     },
-    {
-      name: "options",
-      type: "array",
-      admin: {
-        readOnly: true,
-      },
-      access: {
-        update: isMedusaRequest,
-      },
-      fields: [
-        {
-          name: "title",
-          type: "text",
-          label: "Option Title",
-          required: true,
-          localized: true,
-        },
-        {
-          name: "medusa_id",
-          type: "text",
-          label: "Medusa Option ID",
-          required: true,
-          admin: {
-            hidden: true,
-          },
-          access: {
-            update: isMedusaRequest,
-          }
-        }
-      ],
-    },
-    {
-      name: "variants",
-      type: "array",
-      admin: {
-        readOnly: true,
-      },
-      access: {
-        update: isMedusaRequest,
-      },
-      fields: [
-        {
-          name: "title",
-          type: "text",
-          label: "Variant Title",
-          required: true,
-          localized: true,
-        },
-        {
-          name: "medusa_id",
-          type: "text",
-          label: "Medusa Variant ID",
-          required: true,
-          admin: {
-            hidden: true,
-          },
-          access: {
-            update: isMedusaRequest,
-          }
-        },
-        {
-          name: "option_values",
-          type: "array",
-          fields: [
-            {
-              name: "medusa_id",
-              type: "text",
-              label: "Medusa Option Value ID",
-              required: true,
-              admin: {
-                hidden: true,
-              },
-              access: {
-                update: isMedusaRequest,
-              }
-            },
-            {
-              name: "medusa_option_id",
-              type: "text",
-              label: "Medusa Option ID",
-              required: true,
-              admin: {
-                hidden: true,
-              },
-              access: {
-                update: isMedusaRequest,
-              }
-            },
-            {
-              name: "value",
-              type: "text",
-              label: "Value",
-              required: true,
-              localized: true,
-            }
-          ]
-        }
-      ],
-    }
   ],
-  hooks: {
-    beforeChange: [
-      async ({ data, req }) => {
-        if (typeof data.description === "string") {
-          data.description = convertMarkdownToLexical({
-            editorConfig: await editorConfigFactory.default({
-              config: req.payload.config
-            }),
-            markdown: data.description,
-          })
-        }
-
-        return data
-      }
-    ]
-  },
   access: {
     create: isMedusaRequest,
     delete: isMedusaRequest,
-  }
+  },
 }

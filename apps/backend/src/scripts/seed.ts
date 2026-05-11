@@ -20,6 +20,7 @@ import {
   createShippingProfilesWorkflow,
   createStockLocationsWorkflow,
   createTaxRegionsWorkflow,
+  deleteProductsWorkflow,
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresStep,
@@ -62,6 +63,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
   const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
   const storeModuleService = container.resolve(Modules.STORE);
+  const regionModuleService = container.resolve(Modules.REGION);
 
   const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
 
@@ -111,48 +113,75 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
   logger.info("Seeding region data...");
-  const { result: regionResult } = await createRegionsWorkflow(container).run({
-    input: {
-      regions: [
-        {
-          name: "Europe",
-          currency_code: "eur",
-          countries,
-          payment_providers: ["pp_system_default"],
-        },
-      ],
-    },
+  const existingRegions = await regionModuleService.listRegions({
+    name: "Europe",
   });
-  const region = regionResult[0];
+  let region = existingRegions[0];
+
+  if (!region) {
+    const { result: regionResult } = await createRegionsWorkflow(
+      container
+    ).run({
+      input: {
+        regions: [
+          {
+            name: "Europe",
+            currency_code: "eur",
+            countries,
+            payment_providers: ["pp_system_default"],
+          },
+        ],
+      },
+    });
+    region = regionResult[0];
+
+    logger.info("Seeding tax regions...");
+    await createTaxRegionsWorkflow(container).run({
+      input: countries.map((country_code) => ({
+        country_code,
+        provider_id: "tp_system",
+      })),
+    });
+    logger.info("Finished seeding tax regions.");
+  }
   logger.info("Finished seeding regions.");
 
-  logger.info("Seeding tax regions...");
-  await createTaxRegionsWorkflow(container).run({
-    input: countries.map((country_code) => ({
-      country_code,
-      provider_id: "tp_system",
-    })),
-  });
-  logger.info("Finished seeding tax regions.");
-
   logger.info("Seeding stock location data...");
-  const { result: stockLocationResult } = await createStockLocationsWorkflow(
-    container
-  ).run({
-    input: {
-      locations: [
-        {
-          name: "European Warehouse",
-          address: {
-            city: "Copenhagen",
-            country_code: "DK",
-            address_1: "",
+  const stockLocationModuleService = container.resolve(Modules.STOCK_LOCATION);
+  const existingStockLocations =
+    await stockLocationModuleService.listStockLocations({
+      name: "European Warehouse",
+    });
+  let stockLocation = existingStockLocations[0];
+
+  if (!stockLocation) {
+    const { result: stockLocationResult } = await createStockLocationsWorkflow(
+      container
+    ).run({
+      input: {
+        locations: [
+          {
+            name: "European Warehouse",
+            address: {
+              city: "Copenhagen",
+              country_code: "DK",
+              address_1: "",
+            },
           },
-        },
-      ],
-    },
-  });
-  const stockLocation = stockLocationResult[0];
+        ],
+      },
+    });
+    stockLocation = stockLocationResult[0];
+
+    await link.create({
+      [Modules.STOCK_LOCATION]: {
+        stock_location_id: stockLocation.id,
+      },
+      [Modules.FULFILLMENT]: {
+        fulfillment_provider_id: "manual_manual",
+      },
+    });
+  }
 
   await updateStoresWorkflow(container).run({
     input: {
@@ -160,15 +189,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
       update: {
         default_location_id: stockLocation.id,
       },
-    },
-  });
-
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_provider_id: "manual_manual",
     },
   });
 
@@ -193,135 +213,143 @@ export default async function seedDemoData({ container }: ExecArgs) {
     shippingProfile = shippingProfileResult[0];
   }
 
-  const fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
-    name: "European Warehouse delivery",
-    type: "shipping",
-    service_zones: [
-      {
-        name: "Europe",
-        geo_zones: [
-          {
-            country_code: "gb",
-            type: "country",
-          },
-          {
-            country_code: "de",
-            type: "country",
-          },
-          {
-            country_code: "dk",
-            type: "country",
-          },
-          {
-            country_code: "se",
-            type: "country",
-          },
-          {
-            country_code: "fr",
-            type: "country",
-          },
-          {
-            country_code: "es",
-            type: "country",
-          },
-          {
-            country_code: "it",
-            type: "country",
-          },
-        ],
-      },
-    ],
-  });
+  const existingFulfillmentSets =
+    await fulfillmentModuleService.listFulfillmentSets({
+      name: "European Warehouse delivery",
+    });
+  let fulfillmentSet = existingFulfillmentSets[0];
 
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_set_id: fulfillmentSet.id,
-    },
-  });
+  if (!fulfillmentSet) {
+    fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
+      name: "European Warehouse delivery",
+      type: "shipping",
+      service_zones: [
+        {
+          name: "Europe",
+          geo_zones: [
+            {
+              country_code: "gb",
+              type: "country",
+            },
+            {
+              country_code: "de",
+              type: "country",
+            },
+            {
+              country_code: "dk",
+              type: "country",
+            },
+            {
+              country_code: "se",
+              type: "country",
+            },
+            {
+              country_code: "fr",
+              type: "country",
+            },
+            {
+              country_code: "es",
+              type: "country",
+            },
+            {
+              country_code: "it",
+              type: "country",
+            },
+          ],
+        },
+      ],
+    });
 
-  await createShippingOptionsWorkflow(container).run({
-    input: [
-      {
-        name: "Standard Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Standard",
-          description: "Ship in 2-3 days.",
-          code: "standard",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
+    await link.create({
+      [Modules.STOCK_LOCATION]: {
+        stock_location_id: stockLocation.id,
       },
-      {
-        name: "Express Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Express",
-          description: "Ship in 24 hours.",
-          code: "express",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
+      [Modules.FULFILLMENT]: {
+        fulfillment_set_id: fulfillmentSet.id,
       },
-    ],
-  });
+    });
+
+    await createShippingOptionsWorkflow(container).run({
+      input: [
+        {
+          name: "Standard Shipping",
+          price_type: "flat",
+          provider_id: "manual_manual",
+          service_zone_id: fulfillmentSet.service_zones[0].id,
+          shipping_profile_id: shippingProfile.id,
+          type: {
+            label: "Standard",
+            description: "Ship in 2-3 days.",
+            code: "standard",
+          },
+          prices: [
+            {
+              currency_code: "usd",
+              amount: 10,
+            },
+            {
+              currency_code: "eur",
+              amount: 10,
+            },
+            {
+              region_id: region.id,
+              amount: 10,
+            },
+          ],
+          rules: [
+            {
+              attribute: "enabled_in_store",
+              value: "true",
+              operator: "eq",
+            },
+            {
+              attribute: "is_return",
+              value: "false",
+              operator: "eq",
+            },
+          ],
+        },
+        {
+          name: "Express Shipping",
+          price_type: "flat",
+          provider_id: "manual_manual",
+          service_zone_id: fulfillmentSet.service_zones[0].id,
+          shipping_profile_id: shippingProfile.id,
+          type: {
+            label: "Express",
+            description: "Ship in 24 hours.",
+            code: "express",
+          },
+          prices: [
+            {
+              currency_code: "usd",
+              amount: 10,
+            },
+            {
+              currency_code: "eur",
+              amount: 10,
+            },
+            {
+              region_id: region.id,
+              amount: 10,
+            },
+          ],
+          rules: [
+            {
+              attribute: "enabled_in_store",
+              value: "true",
+              operator: "eq",
+            },
+            {
+              attribute: "is_return",
+              value: "false",
+              operator: "eq",
+            },
+          ],
+        },
+      ],
+    });
+  }
   logger.info("Finished seeding fulfillment data.");
 
   await linkSalesChannelsToStockLocationWorkflow(container).run({
@@ -372,30 +400,62 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding product data...");
 
-  const { result: categoryResult } = await createProductCategoriesWorkflow(
-    container
-  ).run({
-    input: {
-      product_categories: [
-        {
-          name: "Shirts",
+  const productModuleService = container.resolve(Modules.PRODUCT);
+  const categoryNames = ["Shirts", "Sweatshirts", "Pants", "Merch"];
+
+  let categoryResult: any[];
+  try {
+    const { result } = await createProductCategoriesWorkflow(container).run({
+      input: {
+        product_categories: categoryNames.map((name) => ({
+          name,
           is_active: true,
-        },
-        {
-          name: "Sweatshirts",
-          is_active: true,
-        },
-        {
-          name: "Pants",
-          is_active: true,
-        },
-        {
-          name: "Merch",
-          is_active: true,
-        },
-      ],
-    },
+        })),
+      },
+    });
+    categoryResult = result;
+  } catch {
+    const { data: existing } = await query.graph({
+      entity: "product_category",
+      fields: ["id", "name", "handle"],
+    });
+    categoryResult = existing;
+  }
+
+  const productHandles = ["t-shirt", "sweatshirt", "sweatpants", "shorts"];
+  const existingProducts = await productModuleService.listProducts({
+    handle: productHandles,
   });
+
+  if (existingProducts.length) {
+    logger.info(
+      `Deleting ${existingProducts.length} existing products to re-seed...`
+    );
+    await deleteProductsWorkflow(container).run({
+      input: {
+        ids: existingProducts.map((p) => p.id),
+      },
+    });
+  }
+
+  const inventoryModuleService = container.resolve(Modules.INVENTORY);
+  const seedSkus = [
+    "SHIRT-S-BLACK", "SHIRT-S-WHITE", "SHIRT-M-BLACK", "SHIRT-M-WHITE",
+    "SHIRT-L-BLACK", "SHIRT-L-WHITE", "SHIRT-XL-BLACK", "SHIRT-XL-WHITE",
+    "SWEATSHIRT-S", "SWEATSHIRT-M", "SWEATSHIRT-L", "SWEATSHIRT-XL",
+    "SWEATPANTS-S", "SWEATPANTS-M", "SWEATPANTS-L", "SWEATPANTS-XL",
+    "SHORTS-S", "SHORTS-M", "SHORTS-L", "SHORTS-XL",
+  ];
+  const orphanedInventoryItems =
+    await inventoryModuleService.listInventoryItems({ sku: seedSkus });
+  if (orphanedInventoryItems.length) {
+    logger.info(
+      `Deleting ${orphanedInventoryItems.length} orphaned inventory items...`
+    );
+    await inventoryModuleService.deleteInventoryItems(
+      orphanedInventoryItems.map((i) => i.id)
+    );
+  }
 
   await createProductsWorkflow(container).run({
     input: {
@@ -443,6 +503,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "S",
                 Color: "Black",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -460,6 +526,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
                 Color: "White",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
+                ],
               },
               prices: [
                 {
@@ -479,6 +551,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "M",
                 Color: "Black",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -496,6 +574,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
                 Color: "White",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
+                ],
               },
               prices: [
                 {
@@ -515,6 +599,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "L",
                 Color: "Black",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -532,6 +622,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
                 Color: "White",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
+                ],
               },
               prices: [
                 {
@@ -551,6 +647,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "XL",
                 Color: "Black",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -568,6 +670,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
                 Color: "White",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
+                ],
               },
               prices: [
                 {
@@ -619,6 +727,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -635,6 +749,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SWEATSHIRT-M",
               options: {
                 Size: "M",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
+                ],
               },
               prices: [
                 {
@@ -653,6 +773,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -669,6 +795,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SWEATSHIRT-XL",
               options: {
                 Size: "XL",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
+                ],
               },
               prices: [
                 {
@@ -720,6 +852,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -736,6 +874,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SWEATPANTS-M",
               options: {
                 Size: "M",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
+                ],
               },
               prices: [
                 {
@@ -754,6 +898,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -770,6 +920,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SWEATPANTS-XL",
               options: {
                 Size: "XL",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
+                ],
               },
               prices: [
                 {
@@ -821,6 +977,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -837,6 +999,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SHORTS-M",
               options: {
                 Size: "M",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
+                ],
               },
               prices: [
                 {
@@ -855,6 +1023,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
+                ],
+              },
               prices: [
                 {
                   amount: 10,
@@ -871,6 +1045,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
               sku: "SHORTS-XL",
               options: {
                 Size: "XL",
+              },
+              metadata: {
+                images: [
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
+                  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
+                ],
               },
               prices: [
                 {
@@ -899,24 +1079,31 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   const { data: inventoryItems } = await query.graph({
     entity: "inventory_item",
-    fields: ["id"],
+    fields: ["id", "location_levels.location_id"],
   });
 
   const inventoryLevels: CreateInventoryLevelInput[] = [];
   for (const inventoryItem of inventoryItems) {
-    const inventoryLevel = {
+    const hasLevelAtLocation = (inventoryItem.location_levels || []).some(
+      (level: any) => level?.location_id === stockLocation.id
+    );
+    if (hasLevelAtLocation) continue;
+    inventoryLevels.push({
       location_id: stockLocation.id,
       stocked_quantity: 1000000,
       inventory_item_id: inventoryItem.id,
-    };
-    inventoryLevels.push(inventoryLevel);
+    });
   }
 
-  await createInventoryLevelsWorkflow(container).run({
-    input: {
-      inventory_levels: inventoryLevels,
-    },
-  });
+  if (inventoryLevels.length) {
+    await createInventoryLevelsWorkflow(container).run({
+      input: {
+        inventory_levels: inventoryLevels,
+      },
+    });
+  }
 
-  logger.info("Finished seeding inventory levels data.");
+  logger.info(
+    `Finished seeding inventory levels data (created ${inventoryLevels.length}).`
+  );
 }

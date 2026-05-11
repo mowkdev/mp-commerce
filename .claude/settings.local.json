@@ -30,7 +30,12 @@
       "PowerShell(pnpm patch *)",
       "PowerShell(pnpm patch-commit *)",
       "Bash(xargs grep -l \"Translation\\\\|TRANSLATION\")",
-      "PowerShell(npx skills add payloadcms/skills 2>&1)"
+      "PowerShell(npx skills add payloadcms/skills 2>&1)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\smosk\\\\code\\\\mp-commerce\\\\apps\\\\backend\\\\src\\\\workflows\\\\steps\" -Filter \"*.ts\")",
+      "Bash(Select-Object Name)",
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(npx tsc *)",
+      "Bash(find /c/Users/smosk/code/mp-commerce/node_modules/.pnpm/@medusajs+ui@4.1.9_@types+r_a67497a85b337f910d5366e2ea331429/node_modules/@medusajs/ui/dist/cjs/components/progress* -type d)"
     ]
   }
 }

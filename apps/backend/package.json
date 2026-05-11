@@ -18,6 +18,9 @@
     "dev": "medusa develop",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:locales": "medusa exec ./src/scripts/seed-locales.ts",
+    "db:reset": "node scripts/reset-db.js",
+    "user:create": "node scripts/create-admin.js",
+    "seed:fresh": "pnpm db:reset && medusa db:migrate && pnpm user:create && pnpm seed && pnpm seed:locales",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
     "test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"

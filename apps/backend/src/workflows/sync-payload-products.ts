@@ -10,7 +10,6 @@ import {
 import { createPayloadItemsStep } from "./steps/create-payload-items"
 import { updatePayloadItemsStep } from "./steps/update-payload-items"
 import { retrievePayloadItemsStep } from "./steps/retrieve-payload-items"
-import { syncPayloadTranslationsStep } from "./steps/sync-payload-translations"
 
 type SyncPayloadProductsInput = {
   product_ids: string[]
@@ -25,16 +24,9 @@ export const syncPayloadProductsWorkflow = createWorkflow(
         "id",
         "title",
         "subtitle",
-        "description",
         "handle",
         "thumbnail",
-        "images.*",
         "metadata",
-        "created_at",
-        "updated_at",
-        "options.*",
-        "variants.*",
-        "variants.options.*",
       ],
       filters: {
         id: input.product_ids,
@@ -59,28 +51,9 @@ export const syncPayloadProductsWorkflow = createWorkflow(
         const mapProduct = (product: any) => ({
           medusa_id: product.id,
           title: product.title,
-          handle: product.handle,
           subtitle: product.subtitle || "",
-          description: product.description || "",
+          handle: product.handle,
           thumbnail: product.thumbnail || "",
-          images: (product.images || []).map((img: any) => ({
-            url: img.url,
-          })),
-          createdAt: product.created_at,
-          updatedAt: product.updated_at,
-          options: (product.options || []).map((option: any) => ({
-            title: option.title,
-            medusa_id: option.id,
-          })),
-          variants: (product.variants || []).map((variant: any) => ({
-            title: variant.title,
-            medusa_id: variant.id,
-            option_values: (variant.options || []).map((ov: any) => ({
-              medusa_id: ov.id,
-              medusa_option_id: ov.option_id,
-              value: ov.value,
-            })),
-          })),
         })
 
         const toCreate: any[] = []
@@ -132,36 +105,6 @@ export const syncPayloadProductsWorkflow = createWorkflow(
         products: metadataUpdates,
       },
     })
-
-    const translationInput = transform(
-      { createdItems, updatedItems, existingPayloadProducts },
-      (data) => {
-        const allItems = [
-          ...data.createdItems
-            .filter((item: any) => item.id && item.medusa_id)
-            .map((item: any) => ({
-              payload_id: item.id,
-              medusa_id: item.medusa_id,
-            })),
-          ...data.existingPayloadProducts
-            .filter((item: any) => item.id && item.medusa_id)
-            .map((item: any) => ({
-              payload_id: item.id,
-              medusa_id: item.medusa_id,
-            })),
-        ]
-
-        return {
-          collection: "products",
-          entity: "product",
-          items: allItems,
-          locales: [{ medusa: "lv-LV", payload: "lv" }],
-          translatable_fields: ["title", "subtitle", "description"],
-        }
-      }
-    )
-
-    syncPayloadTranslationsStep(translationInput)
 
     const summary = transform(
       { createdItems, updatedItems },

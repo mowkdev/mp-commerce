@@ -153,59 +153,25 @@ export interface User {
  */
 export interface Product {
   id: number;
+  /**
+   * Reference to the product in Medusa. Source of truth for product data.
+   */
   medusa_id: string;
+  /**
+   * Synced from Medusa. Edit in Medusa admin.
+   */
   title: string;
   subtitle?: string | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
   handle?: string | null;
   thumbnail?: string | null;
-  images?:
-    | {
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
+  /**
+   * SEO metadata is managed in Payload (per-locale).
+   */
   seo?: {
     meta_title?: string | null;
     meta_description?: string | null;
     meta_keywords?: string | null;
   };
-  options?:
-    | {
-        title: string;
-        medusa_id: string;
-        id?: string | null;
-      }[]
-    | null;
-  variants?:
-    | {
-        title: string;
-        medusa_id: string;
-        option_values?:
-          | {
-              medusa_id: string;
-              medusa_option_id: string;
-              value: string;
-              id?: string | null;
-            }[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -365,43 +331,14 @@ export interface ProductsSelect<T extends boolean = true> {
   medusa_id?: T;
   title?: T;
   subtitle?: T;
-  description?: T;
   handle?: T;
   thumbnail?: T;
-  images?:
-    | T
-    | {
-        url?: T;
-        id?: T;
-      };
   seo?:
     | T
     | {
         meta_title?: T;
         meta_description?: T;
         meta_keywords?: T;
-      };
-  options?:
-    | T
-    | {
-        title?: T;
-        medusa_id?: T;
-        id?: T;
-      };
-  variants?:
-    | T
-    | {
-        title?: T;
-        medusa_id?: T;
-        option_values?:
-          | T
-          | {
-              medusa_id?: T;
-              medusa_option_id?: T;
-              value?: T;
-              id?: T;
-            };
-        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

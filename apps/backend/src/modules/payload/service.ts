@@ -16,12 +16,37 @@ type InjectedDependencies = {
   }
 }
 
+export type SyncState = {
+  status: "idle" | "running" | "completed" | "failed"
+  total: number
+  processed: number
+  created: number
+  updated: number
+  failed: number
+  startedAt: number | null
+  finishedAt: number | null
+  error: string | null
+}
+
+const initialSyncState = (): SyncState => ({
+  status: "idle",
+  total: 0,
+  processed: 0,
+  created: 0,
+  updated: 0,
+  failed: 0,
+  startedAt: null,
+  finishedAt: null,
+  error: null,
+})
+
 class PayloadModuleService {
   private serverUrl: string
   private apiKey: string
   private userCollection: string
   private logger: InjectedDependencies["logger"]
   private isConfigured: boolean
+  private syncStates: Map<string, SyncState> = new Map()
 
   constructor(
     { logger }: InjectedDependencies,
@@ -203,6 +228,43 @@ class PayloadModuleService {
         },
       },
       limit: medusaIds.length,
+    })
+  }
+
+  getSyncState(collection: string): SyncState {
+    return this.syncStates.get(collection) ?? initialSyncState()
+  }
+
+  startSync(collection: string, total: number): void {
+    this.syncStates.set(collection, {
+      ...initialSyncState(),
+      status: "running",
+      total,
+      startedAt: Date.now(),
+    })
+  }
+
+  reportSyncProgress(
+    collection: string,
+    delta: { processed?: number; created?: number; updated?: number; failed?: number }
+  ): void {
+    const current = this.syncStates.get(collection) ?? initialSyncState()
+    this.syncStates.set(collection, {
+      ...current,
+      processed: current.processed + (delta.processed ?? 0),
+      created: current.created + (delta.created ?? 0),
+      updated: current.updated + (delta.updated ?? 0),
+      failed: current.failed + (delta.failed ?? 0),
+    })
+  }
+
+  finishSync(collection: string, error?: string): void {
+    const current = this.syncStates.get(collection) ?? initialSyncState()
+    this.syncStates.set(collection, {
+      ...current,
+      status: error ? "failed" : "completed",
+      finishedAt: Date.now(),
+      error: error ?? null,
     })
   }
 }
