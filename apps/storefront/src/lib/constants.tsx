@@ -1,8 +1,9 @@
-import { CreditCard } from "@medusajs/icons"
-import Bancontact from "@modules/common/icons/bancontact"
-import Ideal from "@modules/common/icons/ideal"
-import PayPal from "@modules/common/icons/paypal"
 import React from "react"
+import { CreditCard } from "@medusajs/icons"
+
+import Ideal from "@modules/common/icons/ideal"
+import Bancontact from "@modules/common/icons/bancontact"
+import PayPal from "@modules/common/icons/paypal"
 
 /* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
 export const paymentInfoMap: Record<
@@ -10,10 +11,6 @@ export const paymentInfoMap: Record<
   { title: string; icon: React.JSX.Element }
 > = {
   pp_stripe_stripe: {
-    title: "Credit card",
-    icon: <CreditCard />,
-  },
-  "pp_medusa-payments_default": {
     title: "Credit card",
     icon: <CreditCard />,
   },
@@ -36,13 +33,15 @@ export const paymentInfoMap: Record<
   // Add more payment providers here
 }
 
-// This only checks if it is native stripe or medusa payments for card payments, it ignores the other stripe-based providers
+// Checks if the payment provider is Stripe-like (including Medusa Payments which uses Stripe)
 export const isStripeLike = (providerId?: string) => {
-  return (
-    providerId?.startsWith("pp_stripe_") || providerId?.startsWith("pp_medusa-")
-  )
+  return providerId?.startsWith("pp_stripe_") || providerId === "stripe"
 }
 
+// This only checks if it is native stripe for card payments, it ignores the other stripe-based providers
+export const isStripe = (providerId?: string) => {
+  return providerId?.startsWith("pp_stripe_")
+}
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")
 }

@@ -2,7 +2,7 @@ import "server-only"
 import { cookies as nextCookies } from "next/headers"
 
 export const getAuthHeaders = async (): Promise<
-  { authorization: string } | Record<string, never>
+  { authorization: string } | {}
 > => {
   try {
     const cookies = await nextCookies()
@@ -28,14 +28,14 @@ export const getCacheTag = async (tag: string): Promise<string> => {
     }
 
     return `${tag}-${cacheId}`
-  } catch {
+  } catch (error) {
     return ""
   }
 }
 
 export const getCacheOptions = async (
   tag: string
-): Promise<{ tags: string[] } | Record<string, never>> => {
+): Promise<{ tags: string[] } | {}> => {
   if (typeof window !== "undefined") {
     return {}
   }

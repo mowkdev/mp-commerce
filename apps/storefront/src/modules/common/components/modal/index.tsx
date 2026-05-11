@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react"
-import { clx } from "@modules/common/components/ui"
+import { clx } from "@medusajs/ui"
 import React, { Fragment } from "react"
 
 import { ModalProvider, useModal } from "@lib/context/modal-context"

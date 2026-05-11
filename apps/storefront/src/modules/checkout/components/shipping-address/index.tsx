@@ -1,5 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
-import { Container } from "@modules/common/components/ui"
+import { Container } from "@medusajs/ui"
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
@@ -18,7 +18,7 @@ const ShippingAddress = ({
   checked: boolean
   onChange: () => void
 }) => {
-  const [formData, setFormData] = useState<Record<string, string>>({
+  const [formData, setFormData] = useState<Record<string, any>>({
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
     "shipping_address.last_name": cart?.shipping_address?.last_name || "",
     "shipping_address.address_1": cart?.shipping_address?.address_1 || "",
@@ -49,8 +49,8 @@ const ShippingAddress = ({
     address?: HttpTypes.StoreCartAddress,
     email?: string
   ) => {
-    if (address) {
-      setFormData((prevState: Record<string, string>) => ({
+    address &&
+      setFormData((prevState: Record<string, any>) => ({
         ...prevState,
         "shipping_address.first_name": address?.first_name || "",
         "shipping_address.last_name": address?.last_name || "",
@@ -62,14 +62,12 @@ const ShippingAddress = ({
         "shipping_address.province": address?.province || "",
         "shipping_address.phone": address?.phone || "",
       }))
-    }
 
-    if (email) {
-      setFormData((prevState: Record<string, string>) => ({
+    email &&
+      setFormData((prevState: Record<string, any>) => ({
         ...prevState,
         email: email,
       }))
-    }
   }
 
   useEffect(() => {
@@ -106,7 +104,7 @@ const ShippingAddress = ({
             addressInput={
               mapKeys(formData, (_, key) =>
                 key.replace("shipping_address.", "")
-              ) as unknown as HttpTypes.StoreCartAddress
+              ) as HttpTypes.StoreCartAddress
             }
             onSelect={setFormAddress}
           />

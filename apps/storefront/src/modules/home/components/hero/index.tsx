@@ -1,5 +1,6 @@
-import { Github } from "@medusajs/icons";
-import { Button, Heading } from "@modules/common/components/ui";
+import { Github } from "@medusajs/icons"
+import { Button, Heading } from "@medusajs/ui"
+
 const Hero = () => {
   return (
     <div className="h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
@@ -18,14 +19,18 @@ const Hero = () => {
             Powered by Medusa and Next.js
           </Heading>
         </span>
-        <a href="https://github.com/medusajs/dtc-starter" target="_blank">
+        <a
+          href="https://github.com/medusajs/nextjs-starter-medusa"
+          target="_blank"
+        >
           <Button variant="secondary">
-            View on GitHub <Github />
+            View on GitHub
+            <Github />
           </Button>
         </a>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Hero;
+export default Hero

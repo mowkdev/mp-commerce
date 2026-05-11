@@ -99,8 +99,8 @@ export async function signup(_currentState: unknown, formData: FormData) {
     await transferCart()
 
     return createdCustomer
-  } catch (error) {
-    return String(error)
+  } catch (error: any) {
+    return error.toString()
   }
 }
 
@@ -116,14 +116,14 @@ export async function login(_currentState: unknown, formData: FormData) {
         const customerCacheTag = await getCacheTag("customers")
         revalidateTag(customerCacheTag)
       })
-  } catch (error) {
-    return String(error)
+  } catch (error: any) {
+    return error.toString()
   }
 
   try {
     await transferCart()
-  } catch (error) {
-    return String(error)
+  } catch (error: any) {
+    return error.toString()
   }
 }
 
@@ -161,7 +161,7 @@ export async function transferCart() {
 export const addCustomerAddress = async (
   currentState: Record<string, unknown>,
   formData: FormData
-): Promise<{ success: boolean; error: string | null }> => {
+): Promise<any> => {
   const isDefaultBilling = (currentState.isDefaultBilling as boolean) || false
   const isDefaultShipping = (currentState.isDefaultShipping as boolean) || false
 
@@ -186,7 +186,7 @@ export const addCustomerAddress = async (
 
   return sdk.store.customer
     .createAddress(address, {}, headers)
-    .then(async () => {
+    .then(async ({ customer }) => {
       const customerCacheTag = await getCacheTag("customers")
       revalidateTag(customerCacheTag)
       return { success: true, error: null }
@@ -218,7 +218,7 @@ export const deleteCustomerAddress = async (
 export const updateCustomerAddress = async (
   currentState: Record<string, unknown>,
   formData: FormData
-): Promise<{ success: boolean; error: string | null }> => {
+): Promise<any> => {
   const addressId =
     (currentState.addressId as string) || (formData.get("addressId") as string)
 

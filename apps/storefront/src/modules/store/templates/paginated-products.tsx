@@ -55,7 +55,7 @@ export default async function PaginatedProducts({
     return null
   }
 
-  const {
+  let {
     response: { products, count },
   } = await listProductsWithSort({
     page,

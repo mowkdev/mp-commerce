@@ -3,7 +3,7 @@ import React from "react"
 import { IconProps } from "types/icon"
 
 const Medusa: React.FC<IconProps> = ({
-  size: _size = "20",
+  size = "20",
   color = "#9CA3AF",
   ...attributes
 }) => {

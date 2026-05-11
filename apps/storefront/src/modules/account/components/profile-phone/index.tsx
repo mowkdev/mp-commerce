@@ -26,13 +26,13 @@ const ProfileEmail: React.FC<MyInformationProps> = ({ customer }) => {
     try {
       await updateCustomer(customer)
       return { success: true, error: null }
-    } catch (error) {
-      return { success: false, error: String(error) }
+    } catch (error: any) {
+      return { success: false, error: error.toString() }
     }
   }
 
   const [state, formAction] = useActionState(updateCustomerPhone, {
-    error: null as string | null,
+    error: false,
     success: false,
   })
 
@@ -51,7 +51,7 @@ const ProfileEmail: React.FC<MyInformationProps> = ({ customer }) => {
         currentInfo={`${customer.phone}`}
         isSuccess={successState}
         isError={!!state.error}
-        errorMessage={state.error || undefined}
+        errorMessage={state.error}
         clearState={clearState}
         data-testid="account-phone-editor"
       >

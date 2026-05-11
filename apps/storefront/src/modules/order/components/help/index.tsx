@@ -1,4 +1,4 @@
-import { Heading } from "@modules/common/components/ui"
+import { Heading } from "@medusajs/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import React from "react"
 

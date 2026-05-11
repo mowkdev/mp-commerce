@@ -27,13 +27,13 @@ const ProfileName: React.FC<MyInformationProps> = ({ customer }) => {
     try {
       await updateCustomer(customer)
       return { success: true, error: null }
-    } catch (error) {
-      return { success: false, error: String(error) }
+    } catch (error: any) {
+      return { success: false, error: error.toString() }
     }
   }
 
   const [state, formAction] = useActionState(updateCustomerName, {
-    error: null as string | null,
+    error: false,
     success: false,
   })
 

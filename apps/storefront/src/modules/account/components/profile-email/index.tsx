@@ -18,18 +18,22 @@ const ProfileEmail: React.FC<MyInformationProps> = ({ customer }) => {
   // TODO: It seems we don't support updating emails now?
   const updateCustomerEmail = (
     _currentState: Record<string, unknown>,
-    _formData: FormData
+    formData: FormData
   ) => {
+    const customer = {
+      email: formData.get("email") as string,
+    }
+
     try {
-      // email: formData.get("email") as string
+      // await updateCustomer(customer)
       return { success: true, error: null }
-    } catch (error) {
-      return { success: false, error: String(error) }
+    } catch (error: any) {
+      return { success: false, error: error.toString() }
     }
   }
 
   const [state, formAction] = useActionState(updateCustomerEmail, {
-    error: null as string | null,
+    error: false,
     success: false,
   })
 
@@ -48,7 +52,7 @@ const ProfileEmail: React.FC<MyInformationProps> = ({ customer }) => {
         currentInfo={`${customer.email}`}
         isSuccess={successState}
         isError={!!state.error}
-        errorMessage={state.error || undefined}
+        errorMessage={state.error}
         clearState={clearState}
         data-testid="account-email-editor"
       >

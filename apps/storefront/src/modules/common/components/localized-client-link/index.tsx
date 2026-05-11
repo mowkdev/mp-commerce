@@ -18,7 +18,7 @@ const LocalizedClientLink = ({
   className?: string
   onClick?: () => void
   passHref?: true
-  [x: string]: unknown
+  [x: string]: any
 }) => {
   const { countryCode } = useParams()
 
